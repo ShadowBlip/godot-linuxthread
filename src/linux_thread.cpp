@@ -31,13 +31,6 @@ void signal_handler(int sig) { wait(NULL); }
 // until the command and its children have exited. Returns the PID of the
 // subreaper.
 int LinuxThread::subreaper_create_process(String cmd, PackedStringArray args) {
-  // Create a signal action that will listen for child processes that exit and
-  // need to be cleaned up by the reaper.
-  struct sigaction siac;
-  memset(&siac, 0, sizeof(struct sigaction));
-  siac.sa_handler = signal_handler;
-  sigaction(SIGCHLD, &siac, NULL);
-
   // Create a new reaper process
   pid_t reaper_pid = fork();
   if (reaper_pid == -1) {
@@ -49,6 +42,13 @@ int LinuxThread::subreaper_create_process(String cmd, PackedStringArray args) {
   if (reaper_pid != 0) {
     return reaper_pid;
   }
+
+  // Create a signal action that will listen for child processes that exit and
+  // need to be cleaned up by the reaper.
+  struct sigaction siac;
+  memset(&siac, 0, sizeof(struct sigaction));
+  siac.sa_handler = signal_handler;
+  sigaction(SIGCHLD, &siac, NULL);
 
   // Mark the process as child subreaper
   if (prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) == -1) {
